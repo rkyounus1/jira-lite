@@ -1,11 +1,8 @@
-// src/App.jsx
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
-import ProjectDetail from './pages/ProjectDetail'
 import Issues from './pages/Issues'
-import IssueDetail from './pages/IssueDetail'
 import Layout from './components/Layout'
 import './styles/global.css'
 
@@ -16,9 +13,10 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/projects/:id" element={<div className="page-content"><h1>Project Details - Coming Soon</h1></div>} />
           <Route path="/issues" element={<Issues />} />
-          <Route path="/issues/:id" element={<IssueDetail />} />
+          <Route path="/issues/:id" element={<div className="page-content"><h1>Issue Details - Coming Soon</h1></div>} />
+          <Route path="/issues/new" element={<div className="page-content"><h1>Create New Story - Coming Soon</h1></div>} />
         </Routes>
       </Layout>
     </Router>

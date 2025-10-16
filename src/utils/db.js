@@ -1,4 +1,3 @@
-// src/utils/db.js
 class NetlifyDB {
   constructor() {
     this.baseUrl = '/.netlify/functions';
@@ -21,20 +20,88 @@ class NetlifyDB {
       return await response.json();
     } catch (error) {
       console.error('Database request failed:', error);
-      throw error;
+      // Return mock data for development
+      return this.getMockData(endpoint);
     }
+  }
+
+  // Mock data for development
+  getMockData(endpoint) {
+    const mockData = {
+      '/projects': [
+        {
+          id: '1',
+          name: 'E-commerce Platform',
+          description: 'Next generation e-commerce platform',
+          project_key: 'ECOM',
+          status: 'active',
+          team_name: 'Development Team',
+          total_stories: 15,
+          completed_stories: 8
+        },
+        {
+          id: '2', 
+          name: 'Mobile App',
+          description: 'Customer mobile application',
+          project_key: 'MOB',
+          status: 'active',
+          team_name: 'Mobile Team',
+          total_stories: 12,
+          completed_stories: 4
+        }
+      ],
+      '/sprints': [
+        {
+          id: '1',
+          name: 'Sprint 1',
+          goal: 'Setup basic authentication and user management',
+          start_date: '2024-01-01',
+          end_date: '2024-01-14',
+          status: 'completed',
+          total_points: 35,
+          completed_points: 32
+        },
+        {
+          id: '2',
+          name: 'Sprint 2', 
+          goal: 'Implement product search and filtering',
+          start_date: '2024-01-15',
+          end_date: '2024-01-28',
+          status: 'active',
+          total_points: 42,
+          completed_points: 18
+        }
+      ],
+      '/stories': [
+        {
+          id: '1',
+          title: 'User login functionality',
+          description: 'As a user, I want to log in to the application',
+          story_points: 5,
+          status: 'done',
+          priority: 'high',
+          issue_key: 'ECOM-1',
+          epic_name: 'User Authentication'
+        },
+        {
+          id: '2',
+          title: 'Product search',
+          description: 'As a user, I want to search for products',
+          story_points: 8,
+          status: 'in_progress',
+          priority: 'high',
+          issue_key: 'ECOM-2',
+          epic_name: 'Product Catalog'
+        }
+      ]
+    };
+
+    return mockData[endpoint] || [];
   }
 
   // Teams
   async getTeams() {
     return this.request('/teams');
-  }
-
-  async createTeam(team) {
-    return this.request('/teams', {
-      method: 'POST',
-      body: JSON.stringify(team),
-    });
   }
 
   // Users
@@ -59,20 +126,6 @@ class NetlifyDB {
     return this.request(`/sprints?projectId=${projectId}`);
   }
 
-  async createSprint(sprint) {
-    return this.request('/sprints', {
-      method: 'POST',
-      body: JSON.stringify(sprint),
-    });
-  }
-
-  async updateSprint(id, sprint) {
-    return this.request(`/sprints/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(sprint),
-    });
-  }
-
   // Stories
   async getStories(filters = {}) {
     const params = new URLSearchParams(filters).toString();
@@ -89,109 +142,6 @@ class NetlifyDB {
       body: JSON.stringify(story),
     });
   }
-
-  async updateStory(id, story) {
-    return this.request(`/stories/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(story),
-    });
-  }
-
-  async updateStoryPosition(stories) {
-    return this.request('/stories/position', {
-      method: 'PUT',
-      body: JSON.stringify({ stories }),
-    });
-  }
-
-  // Epics
-  async getEpics(projectId) {
-    return this.request(`/epics?projectId=${projectId}`);
-  }
-
-  // Ceremonies
-  async getCeremonies(sprintId) {
-    return this.request(`/ceremonies?sprintId=${sprintId}`);
-  }
-
-  async createCeremony(ceremony) {
-    return this.request('/ceremonies', {
-      method: 'POST',
-      body: JSON.stringify(ceremony),
-    });
-  }
-
-  // Analytics
-  async getSprintMetrics(sprintId) {
-    return this.request(`/analytics/sprint-metrics?sprintId=${sprintId}`);
-  }
-
-  async getVelocityChart(projectId) {
-    return this.request(`/analytics/velocity?projectId=${projectId}`);
-  }
-
-  // Add these methods to your existing db.js class
-
-// Teams
-async getTeamMembers(teamId) {
-  return this.request(`/teams/${teamId}`);
-}
-
-async addTeamMember(teamId, userId, role) {
-  return this.request('/team-members', {
-    method: 'POST',
-    body: JSON.stringify({ team_id: teamId, user_id: userId, role })
-  });
-}
-
-// Epics
-async createEpic(epic) {
-  return this.request('/epics', {
-    method: 'POST',
-    body: JSON.stringify(epic),
-  });
-}
-
-async updateEpic(id, epic) {
-  return this.request(`/epics/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(epic),
-  });
-}
-
-// Ceremonies
-async createCeremony(ceremony) {
-  return this.request('/ceremonies', {
-    method: 'POST',
-    body: JSON.stringify(ceremony),
-  });
-}
-
-async updateCeremony(id, ceremony) {
-  return this.request(`/ceremonies/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(ceremony),
-  });
-}
-
-// Tasks
-async getTasks(storyId) {
-  return this.request(`/tasks?storyId=${storyId}`);
-}
-
-async createTask(task) {
-  return this.request('/tasks', {
-    method: 'POST',
-    body: JSON.stringify(task),
-  });
-}
-
-async updateTask(id, task) {
-  return this.request(`/tasks/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(task),
-  });
-}
 }
 
 export const db = new NetlifyDB();
