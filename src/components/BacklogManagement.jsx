@@ -2,53 +2,33 @@
 import React, { useEffect, useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { db } from '../utils/db';
-import { Plus, MessageSquare, GitBranch, Clock, Flag } from 'lucide-react';
+import { Plus, MessageSquare, GitBranch, Clock } from 'lucide-react';
 
 export default function BacklogManagement({ projectId }) {
   const [stories, setStories] = useState([]);
   const [epics, setEpics] = useState([]);
-  const [users, setUsers] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newStory, setNewStory] = useState({
     title: '',
     description: '',
     story_points: '',
     epic_id: '',
-    priority: 'medium',
-    assignee_id: ''
+    priority: 'medium'
   });
 
   useEffect(() => {
     loadBacklog();
     loadEpics();
-    loadUsers();
   }, [projectId]);
 
   const loadBacklog = async () => {
-    try {
-      const backlogStories = await db.getBacklog(projectId);
-      setStories(backlogStories);
-    } catch (error) {
-      console.error('Error loading backlog:', error);
-    }
+    const backlogStories = await db.getBacklog(projectId);
+    setStories(backlogStories);
   };
 
   const loadEpics = async () => {
-    try {
-      const projectEpics = await db.getEpics(projectId);
-      setEpics(projectEpics);
-    } catch (error) {
-      console.error('Error loading epics:', error);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const allUsers = await db.getUsers();
-      setUsers(allUsers);
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
+    const projectEpics = await db.getEpics(projectId);
+    setEpics(projectEpics);
   };
 
   const handleDragEnd = async (result) => {
@@ -58,56 +38,36 @@ export default function BacklogManagement({ projectId }) {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
+    // Update positions
     const updatedStories = items.map((item, index) => ({
       ...item,
       position: index
     }));
 
     setStories(updatedStories);
-    
-    try {
-      await db.updateStoryPosition(updatedStories);
-    } catch (error) {
-      console.error('Error updating story positions:', error);
-    }
+    await db.updateStoryPosition(updatedStories);
   };
 
   const handleCreateStory = async (e) => {
     e.preventDefault();
-    try {
-      await db.createStory({
-        ...newStory,
-        project_id: projectId,
-        story_points: newStory.story_points ? parseInt(newStory.story_points) : null,
-        reporter_id: users[0]?.id // In real app, this would be the current user
-      });
-      
-      setShowCreateModal(false);
-      setNewStory({
-        title: '',
-        description: '',
-        story_points: '',
-        epic_id: '',
-        priority: 'medium',
-        assignee_id: ''
-      });
-      await loadBacklog();
-    } catch (error) {
-      console.error('Error creating story:', error);
-    }
+    await db.createStory({
+      ...newStory,
+      project_id: projectId,
+      story_points: newStory.story_points ? parseInt(newStory.story_points) : null
+    });
+    
+    setShowCreateModal(false);
+    setNewStory({
+      title: '',
+      description: '',
+      story_points: '',
+      epic_id: '',
+      priority: 'medium'
+    });
+    loadBacklog();
   };
 
   const storyPointOptions = [1, 2, 3, 5, 8, 13, 21];
-
-  const getPriorityColor = (priority) => {
-    const colors = {
-      low: 'bg-gray-100 text-gray-800',
-      medium: 'bg-blue-100 text-blue-800',
-      high: 'bg-orange-100 text-orange-800',
-      critical: 'bg-red-100 text-red-800'
-    };
-    return colors[priority] || colors.medium;
-  };
 
   return (
     <div className="backlog-management">
@@ -140,46 +100,35 @@ export default function BacklogManagement({ projectId }) {
                       className="story-card"
                     >
                       <div className="story-header">
-                        <div className="story-title-section">
-                          <span className="story-key">{story.issue_key}</span>
-                          <h4>{story.title}</h4>
-                        </div>
+                        <h4>{story.title}</h4>
                         <div className="story-meta">
                           {story.story_points && (
                             <span className="story-points">
                               {story.story_points} pts
                             </span>
                           )}
-                          <span className={`priority-badge ${getPriorityColor(story.priority)}`}>
-                            <Flag size={12} />
+                          <span className={`priority-badge priority-${story.priority}`}>
                             {story.priority}
                           </span>
                         </div>
                       </div>
                       
-                      {story.description && (
-                        <p className="story-description">{story.description}</p>
-                      )}
+                      <p className="story-description">{story.description}</p>
                       
                       <div className="story-footer">
                         <div className="story-tags">
-                          {story.epic_name && (
+                          {story.epics && (
                             <span className="epic-tag">
                               <GitBranch size={12} />
-                              {story.epic_name}
-                            </span>
-                          )}
-                          {story.assignee_name && (
-                            <span className="assignee-tag">
-                              {story.assignee_name}
+                              {story.epics.name}
                             </span>
                           )}
                         </div>
                         <div className="story-actions">
-                          <button className="icon-btn" title="Add comment">
+                          <button className="icon-btn">
                             <MessageSquare size={14} />
                           </button>
-                          <button className="icon-btn" title="Time tracking">
+                          <button className="icon-btn">
                             <Clock size={14} />
                           </button>
                         </div>
@@ -257,36 +206,19 @@ export default function BacklogManagement({ projectId }) {
                 </div>
               </div>
               
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Epic</label>
-                  <select
-                    value={newStory.epic_id}
-                    onChange={(e) => setNewStory({...newStory, epic_id: e.target.value})}
-                  >
-                    <option value="">No Epic</option>
-                    {epics.map(epic => (
-                      <option key={epic.id} value={epic.id}>
-                        {epic.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>Assignee</label>
-                  <select
-                    value={newStory.assignee_id}
-                    onChange={(e) => setNewStory({...newStory, assignee_id: e.target.value})}
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="form-group">
+                <label>Epic</label>
+                <select
+                  value={newStory.epic_id}
+                  onChange={(e) => setNewStory({...newStory, epic_id: e.target.value})}
+                >
+                  <option value="">No Epic</option>
+                  {epics.map(epic => (
+                    <option key={epic.id} value={epic.id}>
+                      {epic.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               
               <div className="modal-actions">

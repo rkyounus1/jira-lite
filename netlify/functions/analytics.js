@@ -102,4 +102,96 @@ export async function handler(event, context) {
       body: JSON.stringify({ error: error.message })
     };
   }
+}// netlify/functions/analytics.js
+import { createClient } from '@netlify/db'
+
+export async function handler(event, context) {
+  const db = createClient({ token: process.env.NETLIFY_DB_TOKEN })
+  
+  try {
+    const { sprintId, projectId } = event.queryStringParameters;
+
+    switch (event.path) {
+      case '/.netlify/functions/analytics/sprint-metrics':
+        // Get sprint metrics for burndown chart
+        const { data: sprint } = await db
+          .from('sprints')
+          .select('*')
+          .eq('id', sprintId)
+          .single();
+
+        const { data: stories } = await db
+          .from('stories')
+          .select('*')
+          .eq('sprint_id', sprintId);
+
+        const totalPoints = stories.reduce((sum, story) => sum + (story.story_points || 0), 0);
+        const completedPoints = stories
+          .filter(story => story.status === 'done')
+          .reduce((sum, story) => sum + (story.story_points || 0), 0);
+
+        // Calculate ideal burndown
+        const startDate = new Date(sprint.start_date);
+        const endDate = new Date(sprint.end_date);
+        const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+        
+        const idealBurndown = Array.from({ length: totalDays + 1 }, (_, i) => ({
+          day: i,
+          ideal: totalPoints - (totalPoints / totalDays) * i,
+          actual: 0 // This would come from story history in a real implementation
+        }));
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            totalPoints,
+            completedPoints,
+            remainingPoints: totalPoints - completedPoints,
+            completionPercentage: totalPoints > 0 ? (completedPoints / totalPoints) * 100 : 0,
+            idealBurndown
+          })
+        };
+
+      case '/.netlify/functions/analytics/velocity':
+        // Get velocity chart data
+        const { data: completedSprints } = await db
+          .from('sprints')
+          .select(`
+            *,
+            stories (story_points, status)
+          `)
+          .eq('project_id', projectId)
+          .eq('status', 'completed')
+          .order('start_date', { ascending: true });
+
+        const velocityData = completedSprints.map(sprint => {
+          const completedPoints = sprint.stories
+            .filter(story => story.status === 'done')
+            .reduce((sum, story) => sum + (story.story_points || 0), 0);
+
+          return {
+            sprint: sprint.name,
+            committed: sprint.velocity_planned || 0,
+            completed: completedPoints,
+            date: sprint.start_date
+          };
+        });
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify(velocityData)
+        };
+
+      default:
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ message: 'Not Found' })
+        };
+    }
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message })
+    };
+  }
 }
