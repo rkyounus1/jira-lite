@@ -11,6 +11,24 @@ const options = {
 
 const API = axios.create(options);
 
+// REQUEST INTERCEPTOR: Add JWT token to every request
+API.interceptors.request.use(
+  (config) => {
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// RESPONSE INTERCEPTOR: Handle errors and token expiration
 API.interceptors.response.use(
   (response) => {
     return response;
@@ -18,8 +36,10 @@ API.interceptors.response.use(
   async (error) => {
     const { data, status } = error.response;
 
-    if (data === "Unauthorized" && status === 401) {
-      window.location.href = "/";
+    if (status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      window.location.href = "/login";
     }
 
     const customError: CustomError = {
